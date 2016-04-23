@@ -1,10 +1,9 @@
 /*
 
 TODO:
+- Draw edges
 - Draw axis
   - Or simpler: use different colors for cube vertices
-- Rotate cube around Z axis
-- Indicate depth by the size of the vertices
 
 */
 
@@ -13,41 +12,52 @@ TODO:
 
 #define PI 3.14159265f
 
-struct GameState {
-    BITMAPINFO *bitmapInfo;
-    int *bitmapBuffer;
-    int bitmapWidth, bitmapHeight;
+struct BackBuffer {
+    BITMAPINFO info;
+    unsigned int *memory;
+    int width, height;
 };
 
-void initGame(GameState *state, int windowWidth, int windowHeight) {
-    state->bitmapWidth = windowWidth;
-    state->bitmapHeight = windowHeight;
+BackBuffer makeBackBuffer(int width, int height) {
+    BackBuffer bb = {};
 
-    state->bitmapInfo = (BITMAPINFO *)malloc(sizeof(BITMAPINFO));
-    state->bitmapInfo->bmiHeader.biSize = sizeof(state->bitmapInfo->bmiHeader);
-    state->bitmapInfo->bmiHeader.biWidth = state->bitmapWidth;
-    state->bitmapInfo->bmiHeader.biHeight = -state->bitmapHeight;
-    state->bitmapInfo->bmiHeader.biPlanes = 1;
-    state->bitmapInfo->bmiHeader.biBitCount = 32;
-    state->bitmapInfo->bmiHeader.biCompression = BI_RGB;
+    bb.width = width;
+    bb.height = height;
 
-    state->bitmapBuffer = (int*)malloc(state->bitmapWidth * state->bitmapHeight * sizeof(int));
+    bb.info.bmiHeader.biSize = sizeof(bb.info.bmiHeader);
+    bb.info.bmiHeader.biWidth = width;
+    bb.info.bmiHeader.biHeight = -height;
+    bb.info.bmiHeader.biPlanes = 1;
+    bb.info.bmiHeader.biBitCount = 32;
+    bb.info.bmiHeader.biCompression = BI_RGB;
+
+    bb.memory = (unsigned int*)malloc(width * height * sizeof(unsigned int));
+
+    return bb;
 }
 
-void drawRectangle(GameState *state, int x1, int y1, int x2, int y2, int color) {
+void setPixel(BackBuffer *bb, int x, int y, unsigned int c) {
+    bb->memory[y*bb->width + x] = c;
+}
+
+float square(float x) {
+    return x * x;
+}
+
+void drawRectangle(BackBuffer *bb, int x1, int y1, int x2, int y2, unsigned int color) {
     if (x1 < 0) x1 = 0;
     if (y1 < 0) y1 = 0;
-    if (x2 >= state->bitmapWidth) x2 = state->bitmapWidth - 1;
-    if (y2 >= state->bitmapHeight) y2 = state->bitmapHeight - 1;
+    if (x2 >= bb->width) x2 = bb->width - 1;
+    if (y2 >= bb->height) y2 = bb->height - 1;
     for (int y = y1; y < y2; ++y) {
         for (int x = x1; x < x2; ++x) {
-            state->bitmapBuffer[y*state->bitmapWidth + x] = color;
+            setPixel(bb, x, y, color);
         }
     }
 }
 
-void clearScreen(GameState *state) {
-    drawRectangle(state, 0, 0, state->bitmapWidth-1, state->bitmapHeight-1, 0);
+void clearScreen(BackBuffer *bb) {
+    drawRectangle(bb, 0, 0, bb->width - 1, bb->height - 1, 0);
 }
 
 LRESULT CALLBACK wndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -102,9 +112,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     const float targetFps = 60.0f;
     const float targetDt = 1.0f / targetFps;
 
-    GameState *gameState = (GameState *)malloc(sizeof(GameState));
-    memset(gameState, 0, sizeof(GameState));
-    initGame(gameState, windowWidth, windowHeight);
+    BackBuffer bb = makeBackBuffer(windowWidth, windowHeight);
 
     bool gameIsRunning = true;
     float theta = 0;
@@ -179,7 +187,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         theta += 0.01f;
 
-        clearScreen(gameState);
+        clearScreen(&bb);
 
         for (int i = 0; i < 8; ++i) {
             float x = corners[i][0];
@@ -196,19 +204,19 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             float x_proj_remap = (1.0f + x_proj) / 2.0f;
             float y_proj_remap = (1.0f + y_proj) / 2.0f;
 
-            int x_proj_pix = (int) (x_proj_remap * gameState->bitmapWidth);
-            int y_proj_pix = (int) (y_proj_remap * gameState->bitmapHeight);
+            int x_proj_pix = (int) (x_proj_remap * bb.width);
+            int y_proj_pix = (int) (y_proj_remap * bb.height);
 
             int w = (int) fabs(20.0f / z_rotated);
             int h = w;
-            drawRectangle(gameState, x_proj_pix - w, y_proj_pix - h, x_proj_pix + w, y_proj_pix + h, colors[i]);
+            drawRectangle(&bb, x_proj_pix - w, y_proj_pix - h, x_proj_pix + w, y_proj_pix + h, colors[i]);
         }
 
         HDC hDC = GetDC(hWnd);
 
-        StretchDIBits(hDC, 0, 0, gameState->bitmapWidth, gameState->bitmapHeight,
-            0, 0, gameState->bitmapWidth, gameState->bitmapHeight,
-            gameState->bitmapBuffer, gameState->bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
+        StretchDIBits(hDC, 0, 0, bb.width, bb.height,
+                      0, 0, bb.width, bb.height, bb.memory,
+                      &bb.info, DIB_RGB_COLORS, SRCCOPY);
         ReleaseDC(hWnd, hDC);
     }
 

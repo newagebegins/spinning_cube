@@ -12,6 +12,9 @@ TODO:
 
 #define PI 3.14159265f
 
+#define VERTEX_COUNT 8
+#define EDGE_COUNT 12
+
 struct BackBuffer {
     BITMAPINFO info;
     unsigned int *memory;
@@ -58,34 +61,39 @@ void drawRectangle(BackBuffer *bb, int x1, int y1, int x2, int y2, unsigned int 
 
 void drawLine(BackBuffer *bb, int x1, int y1, int x2, int y2, unsigned int color) {
     int xStart, xEnd, yStart, yEnd;
+    int dx = x2 - x1;
+    int dy = y2 - y1;
 
-    if (x1 < x2) {
-        xStart = x1;
-        xEnd = x2;
-    } else {
-        xStart = x2;
-        xEnd = x1;
-    }
-
-    if (y1 < y2) {
-        yStart = y1;
-        yEnd = y2;
-    } else {
-        yStart = y2;
-        yEnd = y1;
-    }
-
-    int dx = xEnd - xStart;
-    int dy = yEnd - yStart;
-
-    if (dx > dy) {
+    if (abs(dx) > abs(dy)) {
         float m = float(dy) / float(dx);
+        if (x1 < x2) {
+            xStart = x1;
+            yStart = y1;
+            xEnd = x2;
+            yEnd = y2;
+        } else {
+            xStart = x2;
+            yStart = y2;
+            xEnd = x1;
+            yEnd = y1;
+        }
         for (int x = xStart; x <= xEnd; ++x) {
             int y = int(m * (x - xStart) + yStart);
             setPixel(bb, x, y, color);
         }
     } else {
         float m = float(dx) / float(dy);
+        if (y1 < y2) {
+            xStart = x1;
+            yStart = y1;
+            xEnd = x2;
+            yEnd = y2;
+        } else {
+            xStart = x2;
+            yStart = y2;
+            xEnd = x1;
+            yEnd = y1;
+        }
         for (int y = yStart; y <= yEnd; ++y) {
             int x = int(m * (y - yStart) + xStart);
             setPixel(bb, x, y, color);
@@ -200,7 +208,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             }
         }
 
-        float corners[][3] = {
+        float vertices[VERTEX_COUNT][3] = {
             { 1, -1, -1 },
             { 1, -1, 1 },
             { 1,  1, -1 },
@@ -211,25 +219,33 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             { -1,  1, 1 }
         };
 
+        int projectedVertices[VERTEX_COUNT][2] = {};
+
+        int edges[EDGE_COUNT][2] = {
+            {0, 1}, {2, 3}, {0, 2}, {1, 3},
+            {4, 5}, {6, 7}, {4, 6}, {5, 7},
+            {4, 0}, {6, 2}, {5, 1}, {7, 3}
+        };
+
         unsigned int colors[] = {
-            0xFFFFFF00,
-            0xFFFF0000,
-            0xFFFFFF00,
-            0xFFFF0000,
-            0xFFFFFF00,
-            0xFFFF0000,
-            0xFFFFFF00,
-            0xFFFF0000,
+            0xFFFF0000, // 0 red
+            0xFF00FF00, // 1 green
+            0xFF0000FF, // 2 blue
+            0xFFFFFF00, // 3 yellow
+            0xFF00FFFF, // 4 cyan
+            0xFFFF00FF, // 5 magenta
+            0xFFFFFFFF, // 6 white
+            0xFF808080, // 7 gray
         };
 
         theta += 0.01f;
 
         clearScreen(&bb);
 
-        for (int i = 0; i < 8; ++i) {
-            float x = corners[i][0];
-            float y = corners[i][1];
-            float z = corners[i][2];
+        for (int i = 0; i < VERTEX_COUNT; ++i) {
+            float x = vertices[i][0];
+            float y = vertices[i][1];
+            float z = vertices[i][2];
 
             float x_rotated = x * cosf(theta) + z * sinf(theta);
             float y_rotated = y;
@@ -244,14 +260,28 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             int x_proj_pix = (int) (x_proj_remap * bb.width);
             int y_proj_pix = (int) (y_proj_remap * bb.height);
 
-            int w = (int) fabs(20.0f / z_rotated);
-            int h = w;
-            drawRectangle(&bb, x_proj_pix - w, y_proj_pix - h, x_proj_pix + w, y_proj_pix + h, colors[i]);
+            projectedVertices[i][0] = x_proj_pix;
+            projectedVertices[i][1] = y_proj_pix;
+
+            int sz = 5;
+            drawRectangle(&bb, x_proj_pix - sz, y_proj_pix - sz, x_proj_pix + sz, y_proj_pix + sz, colors[i]);
         }
 
-        drawLine(&bb, 0, 0, 100, 100, 0xFFFFFF00);
-        drawLine(&bb, 100, 0, 100, 100, 0xFFFFFF00);
-        drawLine(&bb, 200, 200, 100, 0, 0xFFFF0000);
+        for (int edge = 0; edge < EDGE_COUNT; ++edge) {
+            int x1 = projectedVertices[edges[edge][0]][0];
+            int y1 = projectedVertices[edges[edge][0]][1];
+            int x2 = projectedVertices[edges[edge][1]][0];
+            int y2 = projectedVertices[edges[edge][1]][1];
+            drawLine(&bb, x1, y1, x2, y2, 0xFF00FF00);
+        }
+
+        // clearScreen(&bb);
+        // drawLine(&bb, 0, 0, 100, 100, 0xFFFFFF00);
+        // drawLine(&bb, 100, 0, 100, 100, 0xFFFFFF00);
+        // drawLine(&bb, 200, 200, 100, 0, 0xFFFF0000);
+        // drawLine(&bb, 200, 450, 299, 375, 0xFFFF00FF);
+        // drawLine(&bb, 0, 300, 100, 300, 0xFFFF0000);
+        // drawLine(&bb, 100, 305, 0, 305, 0xFFFF0000);
 
         HDC hDC = GetDC(hWnd);
 

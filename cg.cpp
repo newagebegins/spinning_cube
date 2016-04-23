@@ -56,6 +56,43 @@ void drawRectangle(BackBuffer *bb, int x1, int y1, int x2, int y2, unsigned int 
     }
 }
 
+void drawLine(BackBuffer *bb, int x1, int y1, int x2, int y2, unsigned int color) {
+    int xStart, xEnd, yStart, yEnd;
+
+    if (x1 < x2) {
+        xStart = x1;
+        xEnd = x2;
+    } else {
+        xStart = x2;
+        xEnd = x1;
+    }
+
+    if (y1 < y2) {
+        yStart = y1;
+        yEnd = y2;
+    } else {
+        yStart = y2;
+        yEnd = y1;
+    }
+
+    int dx = xEnd - xStart;
+    int dy = yEnd - yStart;
+
+    if (dx > dy) {
+        float m = float(dy) / float(dx);
+        for (int x = xStart; x <= xEnd; ++x) {
+            int y = int(m * (x - xStart) + yStart);
+            setPixel(bb, x, y, color);
+        }
+    } else {
+        float m = float(dx) / float(dy);
+        for (int y = yStart; y <= yEnd; ++y) {
+            int x = int(m * (y - yStart) + xStart);
+            setPixel(bb, x, y, color);
+        }
+    }
+}
+
 void clearScreen(BackBuffer *bb) {
     drawRectangle(bb, 0, 0, bb->width - 1, bb->height - 1, 0);
 }
@@ -211,6 +248,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             int h = w;
             drawRectangle(&bb, x_proj_pix - w, y_proj_pix - h, x_proj_pix + w, y_proj_pix + h, colors[i]);
         }
+
+        drawLine(&bb, 0, 0, 100, 100, 0xFFFFFF00);
+        drawLine(&bb, 100, 0, 100, 100, 0xFFFFFF00);
+        drawLine(&bb, 200, 200, 100, 0, 0xFFFF0000);
 
         HDC hDC = GetDC(hWnd);
 

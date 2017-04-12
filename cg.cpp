@@ -1,12 +1,3 @@
-/*
-
-TODO:
-- Draw edges
-- Draw axis
-  - Or simpler: use different colors for cube vertices
-
-*/
-
 #include <windows.h>
 #include <math.h>
 
@@ -129,13 +120,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 1;
     }
 
-    int windowWidth = 800;
-    int windowHeight = 600;
+    int windowWidth = 400;
+    int windowHeight = 400;
 
     RECT clientRect = { 0, 0, windowWidth, windowHeight };
     DWORD windowStyle = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
     AdjustWindowRect(&clientRect, windowStyle, NULL);
-    HWND hWnd = CreateWindowEx(NULL, wc.lpszClassName, "cg hackery", windowStyle, 300, 0,
+    HWND hWnd = CreateWindowEx(NULL, wc.lpszClassName, "cg hackery", windowStyle, 300, 100,
         clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, NULL, NULL, hInstance, NULL);
 
     if (!hWnd) {
@@ -238,7 +229,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             0xFF808080, // 7 gray
         };
 
-        theta += 0.01f;
+        theta += 2.0f*dt;
 
         clearScreen(&bb);
 
@@ -274,14 +265,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             int y2 = projectedVertices[edges[edge][1]][1];
             drawLine(&bb, x1, y1, x2, y2, 0xFF00FF00);
         }
-
-        // clearScreen(&bb);
-        // drawLine(&bb, 0, 0, 100, 100, 0xFFFFFF00);
-        // drawLine(&bb, 100, 0, 100, 100, 0xFFFFFF00);
-        // drawLine(&bb, 200, 200, 100, 0, 0xFFFF0000);
-        // drawLine(&bb, 200, 450, 299, 375, 0xFFFF00FF);
-        // drawLine(&bb, 0, 300, 100, 300, 0xFFFF0000);
-        // drawLine(&bb, 100, 305, 0, 305, 0xFFFF0000);
 
         HDC hDC = GetDC(hWnd);
 
